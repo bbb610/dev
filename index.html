@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev Roulette Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            position: relative;
+        }
+
+
+
+        .game-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .roulette-container {
+            position: relative;
+            width: 450px;
+            height: 450px;
+            margin: 20px auto;
+        }
+
+        .roulette-wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            transition: transform 3s cubic-bezier(0.23, 1, 0.32, 1);
+            background: white;
+            border: 3px solid #333;
+        }
+
+        .wheel-section {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            left: 50%;
+            top: 50%;
+            transform-origin: 0 0;
+            overflow: hidden;
+        }
+
+        .wheel-section::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            left: -100%;
+            top: -100%;
+            border-radius: 50%;
+            transform: rotate(45deg);
+        }
+
+        .section-content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .section-number {
+            position: absolute;
+            left: 75%;
+            top: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            transform: translateX(-50%);
+        }
+
+        .red-section {
+            background: linear-gradient(to right, #dc2626 0%, #dc2626 50%, transparent 50%);
+        }
+
+        .black-section {
+            background: linear-gradient(to right, #1f2937 0%, #1f2937 50%, transparent 50%);
+        }
+
+        .green-section {
+            background: linear-gradient(to right, #16a34a 0%, #16a34a 50%, transparent 50%);
+        }
+
+        .inner-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid #333;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #333;
+            z-index: 10;
+        }
+
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-radius: 25px;
+            border: 2px solid #333;
+        }
+
+        .result {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result.red { background-color: #dc2626; color: white; }
+        .result.black { background-color: #1f2937; color: white; }
+        .result.green { background-color: #16a34a; color: white; }
+
+        .dev-sell {
+            font-size: 28px;
+            font-weight: bold;
+            color: #16a34a;
+            margin: 20px 0;
+            padding: 20px;
+            border: 3px solid #16a34a;
+            border-radius: 15px;
+            background-color: rgba(22, 163, 74, 0.1);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .sync-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>Dev Roulette Game</h1>
+        
+        <div class="timer" id="timer">Synchronizing...</div>
+        
+        <div class="roulette-container">
+            <div class="pointer"></div>
+            <div class="roulette-wheel" id="roulette-wheel">
+                <div class="inner-circle">ROULETTE</div>
+            </div>
+        </div>
+        
+        <div class="result" id="result">Waiting for first spin...</div>
+        <div style="font-size: 18px; font-weight: bold; color: #16a34a; margin: 10px 0; padding: 10px; border: 2px solid #16a34a; border-radius: 10px; background-color: rgba(22, 163, 74, 0.1);">
+            GREEN = DEV SELL
+        </div>
+        <div class="dev-sell" id="dev-sell" style="display: none;">🚨 DEV SELLS! 🚨</div>
+        <div class="sync-info">All users see the same synchronized results</div>
+    </div>
+
+    <script>
+        // American roulette layout with 0 and 00 opposite each other
+        const rouletteNumbers = [
+            {num: 0, color: 'green'},
+            {num: 32, color: 'red'}, {num: 15, color: 'black'}, {num: 19, color: 'red'}, {num: 4, color: 'black'},
+            {num: 21, color: 'red'}, {num: 2, color: 'black'}, {num: 25, color: 'red'}, {num: 17, color: 'black'},
+            {num: 34, color: 'red'}, {num: 6, color: 'black'}, {num: 27, color: 'red'}, {num: 13, color: 'black'},
+            {num: 36, color: 'red'}, {num: 11, color: 'black'}, {num: 30, color: 'red'}, {num: 8, color: 'black'},
+            {num: 23, color: 'red'}, {num: 10, color: 'black'},
+            {num: '00', color: 'green'},
+            {num: 5, color: 'red'}, {num: 24, color: 'black'},
+            {num: 16, color: 'red'}, {num: 33, color: 'black'}, {num: 1, color: 'red'}, {num: 20, color: 'black'},
+            {num: 14, color: 'red'}, {num: 31, color: 'black'}, {num: 9, color: 'red'}, {num: 22, color: 'black'},
+            {num: 18, color: 'red'}, {num: 29, color: 'black'}, {num: 7, color: 'red'}, {num: 28, color: 'black'},
+            {num: 12, color: 'red'}, {num: 35, color: 'black'}, {num: 3, color: 'red'}, {num: 26, color: 'black'}
+        ];
+
+        let isSpinning = false;
+        let currentRotation = 0;
+        let spinStartTime = null;
+        let gameStartTime = null;
+
+        // Seeded random number generator for consistency
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
+            
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+        }
+
+        // Get deterministic game start time (rounds to nearest 30-second interval)
+        function getGameStartTime() {
+            const now = Date.now();
+            const secondsSinceEpoch = Math.floor(now / 1000);
+            const roundedSeconds = Math.floor(secondsSinceEpoch / 30) * 30;
+            return roundedSeconds * 1000;
+        }
+
+        // Get current spin cycle info
+        function getCurrentSpinInfo() {
+            const now = Date.now();
+            if (!gameStartTime) {
+                gameStartTime = getGameStartTime();
+            }
+            
+            const timeSinceStart = now - gameStartTime;
+            const spinCycle = Math.floor(timeSinceStart / 33000); // 33 seconds per cycle (30s wait + 3s spin)
+            const timeInCurrentCycle = timeSinceStart % 33000;
+            
+            return {
+                spinCycle,
+                timeInCurrentCycle,
+                isSpinPhase: timeInCurrentCycle >= 30000,
+                timeLeftInPhase: timeInCurrentCycle < 30000 ? 
+                    30000 - timeInCurrentCycle : 
+                    33000 - timeInCurrentCycle
+            };
+        }
+
+        // Generate deterministic result for a specific spin cycle
+        function getSpinResult(spinCycle) {
+            const rng = new SeededRandom(spinCycle + 12345); // Consistent seed
+            const randomIndex = Math.floor(rng.next() * rouletteNumbers.length);
+            return {
+                index: randomIndex,
+                number: rouletteNumbers[randomIndex],
+                spins: 5 + rng.next() * 5 // 5-10 full rotations
+            };
+        }
+
+        // Create roulette wheel sections using SVG for perfect pie slices
+        function createRouletteWheel() {
+            const wheel = document.getElementById('roulette-wheel');
+            const totalSections = rouletteNumbers.length;
+            const anglePerSection = 360 / totalSections;
+            
+            // Create SVG for perfect wheel sections
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.borderRadius = '50%';
+            
+            // Create each section as a path
+            rouletteNumbers.forEach((item, index) => {
+                const startAngle = (index * anglePerSection - 90) * (Math.PI / 180);
+                const endAngle = ((index + 1) * anglePerSection - 90) * (Math.PI / 180);
+                
+                const radius = 225; // Half of container width
+                const innerRadius = 30; // Size of center circle
+                
+                const x1 = 225 + Math.cos(startAngle) * innerRadius;
+                const y1 = 225 + Math.sin(startAngle) * innerRadius;
+                const x2 = 225 + Math.cos(startAngle) * radius;
+                const y2 = 225 + Math.sin(startAngle) * radius;
+                const x3 = 225 + Math.cos(endAngle) * radius;
+                const y3 = 225 + Math.sin(endAngle) * radius;
+                const x4 = 225 + Math.cos(endAngle) * innerRadius;
+                const y4 = 225 + Math.sin(endAngle) * innerRadius;
+                
+                const largeArcFlag = anglePerSection > 180 ? 1 : 0;
+                
+                const pathData = [
+                    `M ${x1} ${y1}`,
+                    `L ${x2} ${y2}`,
+                    `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x3} ${y3}`,
+                    `L ${x4} ${y4}`,
+                    `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`,
+                    'Z'
+                ].join(' ');
+                
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathData);
+                path.setAttribute('fill', item.color === 'red' ? '#dc2626' : item.color === 'black' ? '#1f2937' : '#16a34a');
+                path.setAttribute('stroke', 'white');
+                path.setAttribute('stroke-width', '1');
+                
+                svg.appendChild(path);
+                
+                // Add number text
+                const textAngle = (startAngle + endAngle) / 2;
+                const textRadius = radius * 0.8;
+                const textX = 225 + Math.cos(textAngle) * textRadius;
+                const textY = 225 + Math.sin(textAngle) * textRadius;
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', textX);
+                text.setAttribute('y', textY);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.setAttribute('fill', 'white');
+                text.setAttribute('font-size', '16');
+                text.setAttribute('font-weight', 'bold');
+                text.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+                text.textContent = item.num;
+                
+                svg.appendChild(text);
+            });
+            
+            wheel.appendChild(svg);
+        }
+
+        // Update timer display
+        function updateTimer() {
+            const timerElement = document.getElementById('timer');
+            const spinInfo = getCurrentSpinInfo();
+            
+            if (spinInfo.isSpinPhase) {
+                timerElement.textContent = 'Spinning...';
+            } else {
+                const secondsLeft = Math.ceil(spinInfo.timeLeftInPhase / 1000);
+                timerElement.textContent = `Next spin in: ${secondsLeft}s`;
+            }
+        }
+
+        // Spin the roulette with synchronized result
+        function spinRoulette(spinCycle) {
+            if (isSpinning) return;
+            
+            isSpinning = true;
+            spinStartTime = Date.now();
+            
+            const wheel = document.getElementById('roulette-wheel');
+            const resultElement = document.getElementById('result');
+            const devSellElement = document.getElementById('dev-sell');
+            
+            // Hide previous dev sell message
+            devSellElement.style.display = 'none';
+            
+            // Clear previous result
+            resultElement.className = 'result';
+            resultElement.textContent = 'Spinning...';
+            
+            // Get predetermined result for this spin cycle
+            const spinResult = getSpinResult(spinCycle);
+            const anglePerSection = 360 / rouletteNumbers.length;
+            const finalAngle = spinResult.index * anglePerSection;
+            const totalRotation = currentRotation + (spinResult.spins * 360) + finalAngle;
+            
+            // Apply rotation
+            wheel.style.transform = `rotate(${totalRotation}deg)`;
+            currentRotation = totalRotation % 360;
+            
+            // Show result after spin animation
+            setTimeout(() => {
+                const landedNumber = spinResult.number;
+                
+                resultElement.className = `result ${landedNumber.color}`;
+                resultElement.textContent = `Landed on: ${landedNumber.num} (${landedNumber.color.toUpperCase()})`;
+                
+                // Check if it's green
+                if (landedNumber.color === 'green') {
+                    devSellElement.style.display = 'block';
+                    setTimeout(() => {
+                        devSellElement.style.display = 'none';
+                    }, 5000); // Hide after 5 seconds
+                }
+                
+                isSpinning = false;
+            }, 3000);
+        }
+
+        // Main game loop
+        function gameLoop() {
+            const spinInfo = getCurrentSpinInfo();
+            
+            // Check if we should start spinning
+            if (spinInfo.isSpinPhase && !isSpinning) {
+                spinRoulette(spinInfo.spinCycle);
+            }
+            
+            // Check if spin should be finished
+            if (isSpinning && spinStartTime && Date.now() - spinStartTime >= 3000) {
+                // Spin animation should be done
+            }
+            
+            updateTimer();
+        }
+
+        // Initialize game
+        gameStartTime = getGameStartTime();
+        createRouletteWheel();
+        
+        // Check if we're joining during a spin
+        const initialSpinInfo = getCurrentSpinInfo();
+        if (initialSpinInfo.isSpinPhase) {
+            // We joined during a spin, need to catch up
+            setTimeout(() => {
+                spinRoulette(initialSpinInfo.spinCycle);
+            }, Math.max(0, 3000 - initialSpinInfo.timeLeftInPhase));
+        }
+
+        // Start game loop
+        setInterval(gameLoop, 100); // Check every 100ms for smooth timer updates
+    </script>
+</body>
+</html>
